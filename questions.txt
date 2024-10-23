@@ -1,0 +1,3 @@
+visuaally represent Room struct 
+visuaally represent FlowGraph struct
+visuaally represent rooms (map of Room)

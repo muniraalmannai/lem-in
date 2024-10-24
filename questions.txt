@@ -1,3 +1,65 @@
-visuaally represent Room struct 
-visuaally represent FlowGraph struct
-visuaally represent rooms (map of Room)
+Visual representation of "Room" struct:
+
++----------------------------+
+|          Room               |
++----------------------------+
+| name     : "RoomA"          |  // Room name (e.g., RoomA)
+| x        : 2                |  // X coordinate of the room
+| y        : 3                |  // Y coordinate of the room
+| isStart  : false            |  // Is it the start room?
+| isEnd    : false            |  // Is it the end room?
+| adjacent : ["RoomB","RoomC"]|  // List of connected rooms (adjacent)
++----------------------------+
+
+
+Visual representation of "FlowGraph" struct:
+
++-----------------------------+
+|         FlowGraph            |
++-----------------------------+
+| capacity : map               |  // Map of capacities (room1 -> room2 -> capacity)
+| flow     : map               |  // Map of current flow (room1 -> room2 -> flow)
++-----------------------------+
+
+    When:
+capacity = {
+    "RoomA": {"RoomB": 1, "RoomC": 1},
+    "RoomB": {"RoomA": 1, "RoomC": 1},
+    "RoomC": {"RoomA": 1, "RoomB": 1}
+}
+    and:
+flow = {
+    "RoomA": {"RoomB": 0, "RoomC": 0},
+    "RoomB": {"RoomA": 0, "RoomC": 0},
+    "RoomC": {"RoomA": 0, "RoomB": 0}
+}
+
+
+Visual representation of "rooms" (map of Room):
+
+rooms = {
+    "RoomA": {
+        name     : "RoomA",
+        x        : 2,
+        y        : 3,
+        isStart  : false,
+        isEnd    : false,
+        adjacent : ["RoomB", "RoomC"]
+    },
+    "RoomB": {
+        name     : "RoomB",
+        x        : 5,
+        y        : 6,
+        isStart  : false,
+        isEnd    : false,
+        adjacent : ["RoomA", "RoomC"]
+    },
+    "RoomC": {
+        name     : "RoomC",
+        x        : 7,
+        y        : 9,
+        isStart  : false,
+        isEnd    : true,
+        adjacent : ["RoomA", "RoomB"]
+    }
+}

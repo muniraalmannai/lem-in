@@ -223,6 +223,12 @@ func main() {
 		return
 	}
 
+	// Print file contents
+	for _, line := range lines {
+		fmt.Println(line)
+	}
+	fmt.Println()
+
 	// Parse number of ants
 	err = parseAnts(lines[0])
 	if err != nil {

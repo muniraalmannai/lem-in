@@ -1,0 +1,298 @@
+package main
+
+import (
+	"bufio"
+	"fmt"
+	"math"
+	"os"
+	"strconv"
+	"strings"
+)
+
+type Room struct {
+	name           string
+	x, y           int
+	isStart, isEnd bool
+}
+
+type Graph struct {
+	rooms      map[string]*Room
+	capacity   map[string]map[string]int
+	flow       map[string]map[string]int
+	start, end string
+	antCount   int
+}
+
+func NewGraph() *Graph {
+	return &Graph{
+		rooms:    make(map[string]*Room),
+		capacity: make(map[string]map[string]int),
+		flow:     make(map[string]map[string]int),
+	}
+}
+
+// Room and Link Parsing
+func (g *Graph) addRoom(name string, x, y int, isStart, isEnd bool) {
+	g.rooms[name] = &Room{name: name, x: x, y: y, isStart: isStart, isEnd: isEnd}
+	g.capacity[name] = make(map[string]int)
+	g.flow[name] = make(map[string]int)
+	if isStart {
+		g.start = name
+	}
+	if isEnd {
+		g.end = name
+	}
+}
+
+func (g *Graph) addLink(from, to string) {
+	g.capacity[from][to] = 1
+	g.capacity[to][from] = 1
+	g.flow[from][to] = 0
+	g.flow[to][from] = 0
+}
+
+// BFS for pathfinding
+func (g *Graph) bfs() (map[string]string, bool) {
+	parent := make(map[string]string)
+	visited := make(map[string]bool)
+	queue := []string{g.start}
+	visited[g.start] = true
+
+	for len(queue) > 0 {
+		current := queue[0]
+		queue = queue[1:]
+
+		for next := range g.capacity[current] {
+			residual := g.capacity[current][next] - g.flow[current][next]
+			if !visited[next] && residual > 0 {
+				parent[next] = current
+				visited[next] = true
+				queue = append(queue, next)
+				if next == g.end {
+					return parent, true
+				}
+			}
+		}
+	}
+	return parent, false
+}
+
+// Edmonds-Karp for max flow, collecting paths
+func (g *Graph) findOptimalPaths() [][]string {
+	var paths [][]string
+	for {
+		parent, hasPath := g.bfs()
+		if !hasPath {
+			break
+		}
+		path := []string{g.end}
+		for current := g.end; current != g.start; current = parent[current] {
+			path = append([]string{parent[current]}, path...)
+		}
+		paths = append(paths, path)
+
+		// Update flow for this path
+		for i := 0; i < len(path)-1; i++ {
+			u, v := path[i], path[i+1]
+			g.flow[u][v]++
+			g.flow[v][u]--
+		}
+	}
+	return paths
+}
+
+// File Parsing
+func parseInput(filename string) (*Graph, error) {
+	file, err := os.Open(filename)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+
+	g := NewGraph()
+	scanner := bufio.NewScanner(file)
+
+	// Parse ant count
+	if !scanner.Scan() {
+		return nil, fmt.Errorf("ERROR: invalid data format")
+	}
+	if g.antCount, err = strconv.Atoi(scanner.Text()); err != nil || g.antCount <= 0 {
+		return nil, fmt.Errorf("ERROR: invalid number of ants")
+	}
+
+	// Parse rooms and links
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if line == "##start" {
+			if !scanner.Scan() {
+				return nil, fmt.Errorf("ERROR: invalid data format")
+			}
+			parseRoom(g, scanner.Text(), true, false)
+		} else if line == "##end" {
+			if !scanner.Scan() {
+				return nil, fmt.Errorf("ERROR: invalid data format")
+			}
+			parseRoom(g, scanner.Text(), false, true)
+		} else if strings.Contains(line, "-") {
+			parseLink(g, line)
+		} else if len(line) > 0 && !strings.HasPrefix(line, "#") {
+			parseRoom(g, line, false, false)
+		}
+	}
+	if g.start == "" || g.end == "" {
+		return nil, fmt.Errorf("ERROR: missing start or end room")
+	}
+
+	return g, nil
+}
+
+func parseRoom(g *Graph, line string, isStart, isEnd bool) {
+	parts := strings.Fields(line)
+	if len(parts) != 3 {
+		fmt.Println("ERROR: invalid room format")
+		return
+	}
+	x, _ := strconv.Atoi(parts[1])
+	y, _ := strconv.Atoi(parts[2])
+	g.addRoom(parts[0], x, y, isStart, isEnd)
+}
+
+func parseLink(g *Graph, line string) {
+	parts := strings.Split(line, "-")
+	if len(parts) != 2 {
+		fmt.Println("ERROR: invalid link format")
+		return
+	}
+	g.addLink(parts[0], parts[1])
+}
+
+// Ant Movement Simulation
+func simulateAnts(g *Graph, paths [][]string) {
+	type Move struct {
+		antID int
+		room  string
+	}
+
+	pathLengths := make([]int, len(paths))
+	for i, path := range paths {
+		pathLengths[i] = len(path) - 1
+	}
+
+	type AntState struct {
+		pathIdx  int
+		position int
+		done     bool
+	}
+	ants := make(map[int]*AntState)
+
+	remainingAnts := g.antCount
+	currentAnt := 1
+
+	// Initial ant distribution remains the same
+	for remainingAnts > 0 {
+		bestPath := -1
+		bestArrivalTime := math.MaxInt32
+
+		for pathIdx, length := range pathLengths {
+			antsOnPath := 0
+			for _, ant := range ants {
+				if ant.pathIdx == pathIdx && !ant.done {
+					antsOnPath++
+				}
+			}
+			arrivalTime := length + antsOnPath
+			if arrivalTime < bestArrivalTime {
+				bestArrivalTime = arrivalTime
+				bestPath = pathIdx
+			}
+		}
+
+		ants[currentAnt] = &AntState{
+			pathIdx:  bestPath,
+			position: 0,
+			done:     false,
+		}
+		currentAnt++
+		remainingAnts--
+	}
+
+	// Modified movement simulation
+	activeAnts := true
+	for turn := 1; activeAnts; turn++ {
+		moves := []Move{}
+		occupied := make(map[string]bool)
+		tunnelOccupied := make(map[string]bool) // Track occupied tunnels
+
+		activeAnts = false
+
+		for antID := 1; antID <= g.antCount; antID++ {
+			ant := ants[antID]
+			if ant == nil || ant.done {
+				continue
+			}
+
+			activeAnts = true
+			path := paths[ant.pathIdx]
+			nextPos := ant.position + 1
+
+			if nextPos < len(path) {
+				currentRoom := path[ant.position]
+				nextRoom := path[nextPos]
+				tunnelKey := currentRoom + "-" + nextRoom
+
+				// Check if tunnel is free
+				if !tunnelOccupied[tunnelKey] && !occupied[nextRoom] {
+					ant.position = nextPos
+					moves = append(moves, Move{antID, nextRoom})
+
+					// Mark tunnel as occupied
+					tunnelOccupied[tunnelKey] = true
+					tunnelOccupied[nextRoom+"-"+currentRoom] = true // Mark reverse direction
+
+					if nextRoom != g.end {
+						occupied[nextRoom] = true
+					}
+
+					if nextRoom == g.end {
+						ant.done = true
+					}
+				}
+			}
+		}
+
+		if len(moves) > 0 {
+			turnMoves := make([]string, len(moves))
+			for i, move := range moves {
+				turnMoves[i] = fmt.Sprintf("L%d-%s", move.antID, move.room)
+			}
+			fmt.Println(strings.Join(turnMoves, " "))
+		}
+	}
+}
+
+func main() {
+	if len(os.Args) != 2 {
+		fmt.Println("Usage: go run . <input_file>")
+		return
+	}
+
+	g, err := parseInput(os.Args[1])
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	paths := g.findOptimalPaths()
+	if len(paths) == 0 {
+		fmt.Println("Error: No valid paths found")
+		return
+	}
+
+	fmt.Println("Paths found:")
+	for i, path := range paths {
+		fmt.Printf("Path %d: %v\n", i+1, path)
+	}
+
+	fmt.Println("\nSimulating ant movement...")
+	simulateAnts(g, paths)
+}

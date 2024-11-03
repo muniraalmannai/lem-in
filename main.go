@@ -78,21 +78,38 @@ func LoadFarm(filename string) (*Farm, error) {
 		}
 	}
 
+	// Error checks before building adjacency list
+	if start == "" {
+		return nil, fmt.Errorf("no start room defined")
+	}
+	if end == "" {
+		return nil, fmt.Errorf("no end room defined")
+	}
+	if len(links) == 0 {
+		return nil, fmt.Errorf("no room connections found")
+	}
 	// Build the adjacency list from the links
-	adjacencyList := buildAdjacencyList(links)
+	adjacencyList, err := buildAdjacencyList(links)
+	if err != nil {
+		return nil, err
+	}
 	return &Farm{AntCount: antCount, Start: start, End: end, AdjacencyList: adjacencyList}, nil
 }
 
 // buildAdjacencyList creates a map from room links. Each link shows a direct connection between two rooms.
 // The map (adjacency list) allows easy lookup of all rooms directly connected to any given room.
-func buildAdjacencyList(edges []string) map[string][]string {
+func buildAdjacencyList(edges []string) (map[string][]string, error) {
 	adjList := make(map[string][]string) // Initialize an empty map for the adjacency list
 	for _, edge := range edges {
-		parts := strings.Split(edge, "-")                       // Splits each link by '-' to get the two rooms
+		parts := strings.Split(edge, "-") // Splits each link by '-' to get the two rooms
+		// Validations right after splitting
+		if len(parts) != 2 || parts[0] == parts[1] {
+			return nil, fmt.Errorf("invalid link between rooms: %s", edge)
+		}
 		adjList[parts[0]] = append(adjList[parts[0]], parts[1]) // Connect room A to room B
 		adjList[parts[1]] = append(adjList[parts[1]], parts[0]) // Connect room B to room A
 	}
-	return adjList
+	return adjList, nil
 }
 
 // findAllPaths performs Depth-First Search (DFS) to find all paths from start to end in the adjacency list.
@@ -419,7 +436,7 @@ func main() {
 	}
 	farm, err := LoadFarm(os.Args[1])
 	if err != nil {
-		fmt.Printf("Error loading farm: %v\n", err)
+		fmt.Printf("Invalid file format: %v\n", err)
 		return
 	}
 

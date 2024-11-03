@@ -47,9 +47,14 @@ func LoadFarm(filename string) (*Farm, error) {
 	}
 
 	// Convert the first line to an integer representing the ant count
-	antCount, err := strconv.Atoi(lines[0]) // Parses the first line as an integer
+	antCount, err := strconv.Atoi(lines[0])
 	if err != nil {
-		return nil, fmt.Errorf("error parsing ant count: %w", err) // Returns error if parsing fails
+		return nil, fmt.Errorf("error parsing ant count: %w", err)
+	}
+
+	// Add this check
+	if antCount <= 0 {
+		return nil, fmt.Errorf("invalid number of ants: must be greater than 0")
 	}
 
 	var start, end string // Variables to hold start and end room names
@@ -418,17 +423,18 @@ func main() {
 		return
 	}
 
-	fmt.Printf("Number of ants: %d\n", farm.AntCount)
-	fmt.Printf("Start: %s\n", farm.Start)
-	fmt.Printf("End: %s\n\n", farm.End)
-
 	paths := findAllPaths(farm.AdjacencyList, farm.Start, farm.End, limits)
 	if len(paths) == 0 {
 		fmt.Println("No paths found from start to end.")
 		return
 	}
-	farm.Paths = paths
 
+	// Only print farm information and continue with simulation if valid paths exist
+	fmt.Printf("Number of ants: %d\n", farm.AntCount)
+	fmt.Printf("Start: %s\n", farm.Start)
+	fmt.Printf("End: %s\n\n", farm.End)
+
+	farm.Paths = paths
 	optimalPaths, optimalAntQueue := findOptimalPathCombination(paths, farm.AntCount, limits)
 
 	fmt.Println("Path Combination Selected:")

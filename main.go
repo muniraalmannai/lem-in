@@ -408,7 +408,7 @@ func main() {
 	// Define all limits
 	limits := PathLimits{
 		MaxRoomsPerPath:       15,
-		MaxTotalPaths:         20,
+		MaxTotalPaths:         100,
 		MaxPathCombination:    20,
 		MaxDirectPaths:        3,
 		MaxPathsInCombination: 20,

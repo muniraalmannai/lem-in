@@ -1,5 +1,3 @@
-package main
-
 import (
 	"bufio" // Provides buffered input/output functions, like reading from files line-by-line
 	"fmt"   // For formatted I/O (e.g., printing)
@@ -21,13 +19,6 @@ type Farm struct {
 	End           string
 	AdjacencyList map[string][]string
 	Paths         [][]string
-}
-type PathLimits struct {
-	MaxRoomsPerPath       int
-	MaxTotalPaths         int
-	MaxPathCombination    int
-	MaxDirectPaths        int
-	MaxPathsInCombination int
 }
 
 // LoadFarm loads the configuration of the farm from a file and returns a Farm object.
@@ -92,37 +83,26 @@ func buildAdjacencyList(edges []string) map[string][]string {
 
 // findAllPaths performs Depth-First Search (DFS) to find all paths from start to end in the adjacency list.
 // Returns all paths found as slices of room names.
-func findAllPaths(adjacencyList map[string][]string, start, end string, limits PathLimits) [][]string {
-	var paths [][]string
+func findAllPaths(adjacencyList map[string][]string, start, end string) [][]string {
+	var paths [][]string // Slice to store each path found from start to end
 
+	// Define a recursive DFS function to explore each path
 	var dfs func(current string, path []string)
 	dfs = func(current string, path []string) {
-		if len(path) > limits.MaxRoomsPerPath {
-			return
-		}
-
-		path = append(path, current)
+		path = append(path, current) // Add the current room to the path
 		if current == end {
-			if len(paths) >= limits.MaxTotalPaths {
-				return
-			}
-			paths = append(paths, append([]string{}, path...))
+			paths = append(paths, append([]string{}, path...)) // Add completed path to paths
 			return
 		}
 
+		// Loop over each neighboring room of the current room
 		for _, neighbor := range adjacencyList[current] {
-			if !contains(path, neighbor) {
-				dfs(neighbor, path)
+			if !contains(path, neighbor) { // Check if the neighbor is already in the path
+				dfs(neighbor, path) // Recursively explore with the neighbor added to the path
 			}
 		}
 	}
-	dfs(start, []string{})
-
-	if len(paths) == 0 {
-		fmt.Println("Error: No valid paths found within length limit of", limits.MaxRoomsPerPath, "rooms")
-		return paths
-	}
-
+	dfs(start, []string{}) // Start DFS from the start room with an empty path
 	return paths
 }
 
@@ -138,43 +118,38 @@ func contains(path []string, room string) bool {
 
 // findOptimalPathCombination calculates the optimal combination of paths to move all ants from start to end
 // in the minimum number of turns. If a direct path is available, it is prioritized.
-func findOptimalPathCombination(paths [][]string, antCount int, limits PathLimits) ([][]string, []int) {
-	sort.Slice(paths, func(i, j int) bool {
-		return len(paths[i]) < len(paths[j])
-	})
-
-	if len(paths) > limits.MaxPathCombination {
-		fmt.Printf("Notice: Limiting path combinations to %d most efficient paths\n", limits.MaxPathCombination)
-		paths = paths[:limits.MaxPathCombination]
-	}
-
+func findOptimalPathCombination(paths [][]string, antCount int) ([][]string, []int) {
 	if containsDirectPath(paths) {
+		// Sort paths by length first
+		sort.Slice(paths, func(i, j int) bool {
+			return len(paths[i]) < len(paths[j])
+		})
+
+		// Take the shortest paths that don't intersect
 		var optimalPaths [][]string
 		for _, path := range paths {
 			if isValidCombination(append(optimalPaths, path)) {
 				optimalPaths = append(optimalPaths, path)
 			}
-			if len(optimalPaths) >= limits.MaxDirectPaths {
+			if len(optimalPaths) >= 3 { // Limit to reasonable number of parallel paths
 				break
 			}
 		}
 
-		// Calculate the length of each optimal path for turn calculations
+		// Calculate optimal ant distribution
 		pathLengths := make([]int, len(optimalPaths))
 		for i := range optimalPaths {
 			pathLengths[i] = len(optimalPaths[i]) - 1
 		}
 
-		// antQueue will track the distribution of ants across each optimal path
+		// Distribute ants to minimize maximum turns
 		antQueue := make([]int, len(optimalPaths))
 		remaining := antCount
 
-		// Distribute ants across paths, prioritizing the shortest path (in terms of turns) each time
 		for remaining > 0 {
 			shortestIdx := 0
 			minTurns := pathLengths[0] + antQueue[0]
 
-			// Find the path that results in the fewest turns with current distribution
 			for i := 1; i < len(optimalPaths); i++ {
 				turns := pathLengths[i] + antQueue[i]
 				if turns < minTurns {
@@ -183,29 +158,24 @@ func findOptimalPathCombination(paths [][]string, antCount int, limits PathLimit
 				}
 			}
 
-			// Assign one ant to the selected shortest path
 			antQueue[shortestIdx]++
-			remaining-- // Decrease the remaining ants to assign
+			remaining--
 		}
 
-		return optimalPaths, antQueue // Return the selected paths and ant distribution
+		return optimalPaths, antQueue
 	}
 
-	// If no direct path is available, explore combinations to find the minimum turn configuration
+	// If no direct path exists, find the optimal path combination to minimize turns
 	var optimalPaths [][]string
 	var optimalAntQueue []int
-	minTurns := int(^uint(0) >> 1) // Initialize minTurns with the maximum possible integer
+	minTurns := int(^uint(0) >> 1) // Initialize minTurns to a large number
 
-	// Generate all valid path combinations and find the one with minimum total turns
+	// Loop through combinations of paths to find the optimal solution
 	for i := 1; i <= len(paths); i++ {
-		combinations := generateCombinations(paths, i, limits)
-
+		combinations := generateCombinations(paths, i)
 		for _, combo := range combinations {
-			// Ensure the path combination is valid (no shared rooms between paths)
 			if isValidCombination(combo) {
-				// Calculate ant distribution and total turns for this combination
 				antQueue, turns := distributeAnts(combo, antCount)
-				// Update optimal configuration if this combination has fewer turns
 				if turns < minTurns {
 					minTurns = turns
 					optimalPaths = combo
@@ -214,7 +184,7 @@ func findOptimalPathCombination(paths [][]string, antCount int, limits PathLimit
 			}
 		}
 	}
-	return optimalPaths, optimalAntQueue // Return the best path combination and ant distribution
+	return optimalPaths, optimalAntQueue
 }
 
 // containsDirectPath checks if there is a direct path (only 2 rooms) from start to end in the list of paths.
@@ -242,15 +212,9 @@ func isValidCombination(paths [][]string) bool {
 }
 
 // generateCombinations generates all combinations of paths with a specified length.
-func generateCombinations(paths [][]string, length int, limits PathLimits) [][][]string {
-	if length > limits.MaxPathsInCombination {
-		fmt.Println("Error: Exceeded maximum allowed path combination length")
-		return nil
-	}
-
+func generateCombinations(paths [][]string, length int) [][][]string {
 	var combinations [][][]string
 	comb := make([][]string, length)
-
 	var generate func(int, int)
 	generate = func(start, depth int) {
 		if depth == length {
@@ -405,27 +369,19 @@ func main() {
 		return
 	}
 
-	// Define all limits
-	limits := PathLimits{
-		MaxRoomsPerPath:       15,
-		MaxTotalPaths:         20,
-		MaxPathCombination:    20,
-		MaxDirectPaths:        3,
-		MaxPathsInCombination: 20,
-	}
 	farm, err := LoadFarm(os.Args[1])
 	if err != nil {
 		fmt.Printf("Error loading farm: %v\n", err)
 		return
 	}
 
-	paths := findAllPaths(farm.AdjacencyList, farm.Start, farm.End, limits)
+	paths := findAllPaths(farm.AdjacencyList, farm.Start, farm.End)
 	if len(paths) == 0 {
 		fmt.Println("No paths found from start to end.")
 		return
 	}
 	farm.Paths = paths
 
-	optimalPaths, optimalAntQueue := findOptimalPathCombination(paths, farm.AntCount, limits)
+	optimalPaths, optimalAntQueue := findOptimalPathCombination(paths, farm.AntCount)
 	simulateAntMovement(optimalPaths, optimalAntQueue, farm.AntCount)
 }

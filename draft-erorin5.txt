@@ -1,3 +1,4 @@
+package main
 import (
 	"bufio" // Provides buffered input/output functions, like reading from files line-by-line
 	"fmt"   // For formatted I/O (e.g., printing)

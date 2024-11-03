@@ -405,7 +405,6 @@ func main() {
 		return
 	}
 
-	// Define all limits
 	limits := PathLimits{
 		MaxRoomsPerPath:       15,
 		MaxTotalPaths:         100,
@@ -419,6 +418,10 @@ func main() {
 		return
 	}
 
+	fmt.Printf("Number of ants: %d\n", farm.AntCount)
+	fmt.Printf("Start: %s\n", farm.Start)
+	fmt.Printf("End: %s\n\n", farm.End)
+
 	paths := findAllPaths(farm.AdjacencyList, farm.Start, farm.End, limits)
 	if len(paths) == 0 {
 		fmt.Println("No paths found from start to end.")
@@ -427,5 +430,20 @@ func main() {
 	farm.Paths = paths
 
 	optimalPaths, optimalAntQueue := findOptimalPathCombination(paths, farm.AntCount, limits)
+
+	fmt.Println("Path Combination Selected:")
+	for i, path := range optimalPaths {
+		fmt.Printf("Path %d: %v\n", i+1, path)
+	}
+	fmt.Println()
+
+	// Calculate total turns before simulation
+	pathLengths := make([]int, len(optimalPaths))
+	for i := range optimalPaths {
+		pathLengths[i] = len(optimalPaths[i]) - 1
+	}
+	totalTurns := maxPathTurns(pathLengths, optimalAntQueue)
+
 	simulateAntMovement(optimalPaths, optimalAntQueue, farm.AntCount)
+	fmt.Printf("\nNumber of Turns = %d\n", totalTurns)
 }

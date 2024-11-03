@@ -46,14 +46,14 @@ func LoadFarm(filename string) (*Farm, error) {
 		lines = append(lines, scanner.Text()) // Appends each line to 'lines'
 	}
 
-	// Convert the first line to an integer representing the ant count
-	antCount, err := strconv.Atoi(lines[0])
-	if err != nil {
-		return nil, fmt.Errorf("error parsing ant count: %w", err)
+	// Check for empty file first (prevent panics)
+	if len(lines) == 0 {
+		return nil, fmt.Errorf("empty input file")
 	}
 
-	// Add this check
-	if antCount <= 0 {
+	// Convert the first line to an integer representing the ant count
+	antCount, err := strconv.Atoi(lines[0])
+	if err != nil || antCount <= 0 {
 		return nil, fmt.Errorf("invalid number of ants: must be greater than 0")
 	}
 
@@ -65,11 +65,19 @@ func LoadFarm(filename string) (*Farm, error) {
 		line := lines[i]
 		switch line {
 		case "##start":
-			start = strings.Fields(lines[i+1])[0] // Gets the room name for start from the next line
-			i++                                   // Skips the next line, as it's already processed
+			// Add boundary (prevent panics)
+			if i+1 >= len(lines) {
+				return nil, fmt.Errorf("invalid file format: missing room definition after start command")
+			}
+			start = strings.Fields(lines[i+1])[0]
+			i++
 		case "##end":
-			end = strings.Fields(lines[i+1])[0] // Gets the room name for end from the next line
-			i++                                 // Skips the next line, as it's already processed
+			// Add boundary (prevent panics)
+			if i+1 >= len(lines) {
+				return nil, fmt.Errorf("invalid file format: missing room definition after end command")
+			}
+			end = strings.Fields(lines[i+1])[0]
+			i++ // Skips the next line, as it's already processed
 		default:
 			// If the line contains a dash, treat it as a link between two rooms
 			if strings.Contains(line, "-") {
@@ -344,18 +352,12 @@ func simulateAntMovement(paths [][]string, antQueue []int, antCount int) {
 	}
 
 	ants := make([]Ant, antCount) // Create a slice for each ant
-	antId := 1
-	pathIdx := 0
+	antId, pathIdx := 1, 0
 
 	// Initialize ants and assign them to paths
 	for antId <= antCount {
 		if antQueue[pathIdx] > 0 {
-			ants[antId-1] = Ant{
-				id:       antId,
-				pathIdx:  pathIdx,
-				position: 0,
-				done:     false,
-			}
+			ants[antId-1] = Ant{id: antId, pathIdx: pathIdx, position: 0}
 			antQueue[pathIdx]--
 			antId++
 		}
@@ -375,27 +377,22 @@ func simulateAntMovement(paths [][]string, antQueue []int, antCount int) {
 			}
 
 			path := paths[ants[i].pathIdx]
-			currentPos := ants[i].position
-			nextPos := currentPos + 1
+			currentPos, nextPos := ants[i].position, ants[i].position+1
 
+			// Ensure that the ant is still within the path
 			if nextPos < len(path) {
-				currentRoom := path[currentPos]
-				nextRoom := path[nextPos]
-				tunnelKey := currentRoom + "-" + nextRoom
-				reverseTunnelKey := nextRoom + "-" + currentRoom
+				currentRoom, nextRoom := path[currentPos], path[nextPos]
+				tunnelKey, reverseTunnelKey := currentRoom+"-"+nextRoom, nextRoom+"-"+currentRoom
 
-				canMove := true
-				if nextRoom != path[len(path)-1] && occupiedRooms[nextRoom] {
-					canMove = false
-				}
-				if occupiedTunnels[tunnelKey] || occupiedTunnels[reverseTunnelKey] {
-					canMove = false
-				}
+				// Simplified condition for moving to the next room and tunnel
+				if !(nextRoom != path[len(path)-1] && occupiedRooms[nextRoom]) &&
+					!occupiedTunnels[tunnelKey] && !occupiedTunnels[reverseTunnelKey] {
 
-				if canMove {
+					// Move the ant to the next position
 					ants[i].position = nextPos
 					moves = append(moves, fmt.Sprintf("L%d-%s", ants[i].id, nextRoom))
 
+					// Mark room and tunnel as occupied
 					if nextRoom != path[len(path)-1] {
 						occupiedRooms[nextRoom] = true
 					}
@@ -410,10 +407,12 @@ func simulateAntMovement(paths [][]string, antQueue []int, antCount int) {
 			}
 		}
 
+		// Print the moves for the current turn
 		if len(moves) > 0 {
 			fmt.Println(strings.Join(moves, " "))
 		}
 
+		// Break the loop if no ants moved
 		if !activeAnts {
 			break
 		}

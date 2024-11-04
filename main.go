@@ -54,7 +54,7 @@ func LoadFarm(filename string) (*Farm, error) {
 	// Convert the first line to an integer representing the ant count
 	antCount, err := strconv.Atoi(lines[0])
 	if err != nil || antCount <= 0 {
-		return nil, fmt.Errorf("invalid number of ants: must be greater than 0")
+		return nil, fmt.Errorf("invalid number of ants: must be a number greater than 0")
 	}
 
 	var start, end string // Variables to hold start and end room names

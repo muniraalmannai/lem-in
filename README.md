@@ -1,5 +1,10 @@
 # 🐜 Ant Farm (lem-in)
 
+![Ant Farm Image](https://github.com/user-attachments/assets/4714eb9d-f7bf-45c9-b971-cf8d8fe64fbe)
+
+*Image courtesy of [RichardsCoffeeShop](https://github.com/RichardsCoffeeShop/), from the [lem-in project](https://github.com/RichardsCoffeeShop/lem-in), licensed under the [MIT License](https://opensource.org/licenses/MIT).*
+
+
 This project, **lem-in**, is a digital simulation of an ant farm where ants navigate through rooms and tunnels to reach an exit. The objective is to find the quickest way to move a set number of ants from a designated start room (`##start`) to an end room (`##end`) while avoiding congestion and optimizing their paths.
 
 ## Project Overview

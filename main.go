@@ -1,20 +1,15 @@
 package main
 
 import (
-	"bufio" // Provides buffered input/output functions, like reading from files line-by-line
-	"fmt"   // For formatted I/O (e.g., printing)
-	"os"    // OS-level functions like file handling
+	"bufio"
+	"fmt"
+	"os"
 	"sort"
-	"strconv" // For converting strings to integers
-	"strings" // For basic string manipulation
+	"strconv"
+	"strings"
 )
 
 // Farm struct represents the configuration of the ant farm.
-// It contains:
-// - AntCount: the total number of ants in the farm
-// - Start and End: names of the start and end rooms
-// - AdjacencyList: a map showing room connections
-// - Paths: a list of all possible paths from start to end
 type Farm struct {
 	AntCount      int
 	Start         string
@@ -22,6 +17,8 @@ type Farm struct {
 	AdjacencyList map[string][]string
 	Paths         [][]string
 }
+
+// Limits to be set by user in main function
 type PathLimits struct {
 	MaxRoomsPerPath       int
 	MaxTotalPaths         int
@@ -30,20 +27,19 @@ type PathLimits struct {
 	MaxPathsInCombination int
 }
 
-// LoadFarm loads the configuration of the farm from a file and returns a Farm object.
-// It reads the file, extracts the number of ants, identifies the start and end rooms,
-// and builds a list of connections (links) between rooms.
-func LoadFarm(filename string) (*Farm, error) {
-	file, err := os.Open(filename) // Opens the file specified by filename
+// loadFarm loads the configuration of the farm into Farm struct.
+func loadFarm(filename string) (*Farm, error) {
+	file, err := os.Open(filename)
 	if err != nil {
-		return nil, fmt.Errorf("error opening file: %w", err) // Returns an error if file can't be opened
+		return nil, fmt.Errorf("error opening file: %w", err)
 	}
-	defer file.Close() // Ensures the file closes when function finishes
+	defer file.Close()
 
-	scanner := bufio.NewScanner(file) // Creates a scanner to read the file line-by-line
-	var lines []string                // Stores each line of the file
+	// Scan the file and appends each line to 'lines'
+	scanner := bufio.NewScanner(file)
+	var lines []string
 	for scanner.Scan() {
-		lines = append(lines, scanner.Text()) // Appends each line to 'lines'
+		lines = append(lines, scanner.Text())
 	}
 
 	// Check for empty file first (prevent panics)
@@ -51,37 +47,37 @@ func LoadFarm(filename string) (*Farm, error) {
 		return nil, fmt.Errorf("empty input file")
 	}
 
-	// Convert the first line to an integer representing the ant count
+	// Extract ant count
 	antCount, err := strconv.Atoi(lines[0])
 	if err != nil || antCount <= 0 {
 		return nil, fmt.Errorf("invalid number of ants: must be a number greater than 0")
 	}
 
-	var start, end string // Variables to hold start and end room names
-	var links []string    // Slice to store links between rooms
+	var start, end string
+	var links []string
 
 	// Loop through each line to find the start, end, and room connections
 	for i := 1; i < len(lines); i++ {
 		line := lines[i]
 		switch line {
 		case "##start":
-			// Add boundary (prevent panics)
+			// Boundary (prevent panics)
 			if i+1 >= len(lines) {
 				return nil, fmt.Errorf("invalid file format: missing room definition after start command")
 			}
 			start = strings.Fields(lines[i+1])[0]
-			i++
+			i++ // The next line is already processed
 		case "##end":
-			// Add boundary (prevent panics)
+			// Boundary (prevent panics)
 			if i+1 >= len(lines) {
 				return nil, fmt.Errorf("invalid file format: missing room definition after end command")
 			}
 			end = strings.Fields(lines[i+1])[0]
-			i++ // Skips the next line, as it's already processed
+			i++
 		default:
-			// If the line contains a dash, treat it as a link between two rooms
+			// If the line contains a dash, append into links slice
 			if strings.Contains(line, "-") {
-				links = append(links, line) // Adds the link to the links slice
+				links = append(links, line)
 			}
 		}
 	}
@@ -96,6 +92,7 @@ func LoadFarm(filename string) (*Farm, error) {
 	if len(links) == 0 {
 		return nil, fmt.Errorf("no room connections found")
 	}
+
 	// Build the adjacency list from the links
 	adjacencyList, err := buildAdjacencyList(links)
 	if err != nil {
@@ -104,13 +101,11 @@ func LoadFarm(filename string) (*Farm, error) {
 	return &Farm{AntCount: antCount, Start: start, End: end, AdjacencyList: adjacencyList}, nil
 }
 
-// buildAdjacencyList creates a map from room links. Each link shows a direct connection between two rooms.
-// The map (adjacency list) allows easy lookup of all rooms directly connected to any given room.
+// buildAdjacencyList creates a map from links[]. Each link shows a direct connection between two rooms.
 func buildAdjacencyList(edges []string) (map[string][]string, error) {
-	adjList := make(map[string][]string) // Initialize an empty map for the adjacency list
+	adjList := make(map[string][]string)
 	for _, edge := range edges {
-		parts := strings.Split(edge, "-") // Splits each link by '-' to get the two rooms
-		// Validations right after splitting
+		parts := strings.Split(edge, "-")
 		if len(parts) != 2 || parts[0] == parts[1] {
 			return nil, fmt.Errorf("invalid link between rooms: %s", edge)
 		}
@@ -121,7 +116,6 @@ func buildAdjacencyList(edges []string) (map[string][]string, error) {
 }
 
 // findAllPaths performs Depth-First Search (DFS) to find all paths from start to end in the adjacency list.
-// Returns all paths found as slices of room names.
 func findAllPaths(adjacencyList map[string][]string, start, end string, limits PathLimits) [][]string {
 	var paths [][]string
 
@@ -156,18 +150,17 @@ func findAllPaths(adjacencyList map[string][]string, start, end string, limits P
 	return paths
 }
 
-// contains checks if a specific room is already in the current path to avoid revisiting rooms.
+// findAllPaths helper, checks if a specific room is already in the current path to avoid loops.
 func contains(path []string, room string) bool {
 	for _, v := range path {
-		if v == room { // If any room in the path matches the given room, return true
+		if v == room {
 			return true
 		}
 	}
-	return false // Room not found in path
+	return false
 }
 
-// findOptimalPathCombination calculates the optimal combination of paths to move all ants from start to end
-// in the minimum number of turns. If a direct path is available, it is prioritized.
+// findOptimalPathCombination calculates the optimal combination of paths in the minimum number of turns.
 func findOptimalPathCombination(paths [][]string, antCount int, limits PathLimits) ([][]string, []int) {
 	sort.Slice(paths, func(i, j int) bool {
 		return len(paths[i]) < len(paths[j])
@@ -189,13 +182,11 @@ func findOptimalPathCombination(paths [][]string, antCount int, limits PathLimit
 			}
 		}
 
-		// Calculate the length of each optimal path for turn calculations
+		// Calculate the length of each path for turn calculations and track the distribution of ants across paths.
 		pathLengths := make([]int, len(optimalPaths))
 		for i := range optimalPaths {
 			pathLengths[i] = len(optimalPaths[i]) - 1
 		}
-
-		// antQueue will track the distribution of ants across each optimal path
 		antQueue := make([]int, len(optimalPaths))
 		remaining := antCount
 
@@ -218,20 +209,19 @@ func findOptimalPathCombination(paths [][]string, antCount int, limits PathLimit
 			remaining-- // Decrease the remaining ants to assign
 		}
 
-		return optimalPaths, antQueue // Return the selected paths and ant distribution
+		return optimalPaths, antQueue
 	}
 
 	// If no direct path is available, explore combinations to find the minimum turn configuration
 	var optimalPaths [][]string
 	var optimalAntQueue []int
-	minTurns := int(^uint(0) >> 1) // Initialize minTurns with the maximum possible integer
+	minTurns := int(^uint(0) >> 1)
 
 	// Generate all valid path combinations and find the one with minimum total turns
 	for i := 1; i <= len(paths); i++ {
 		combinations := generateCombinations(paths, i, limits)
-
+		// Combination checker:
 		for _, combo := range combinations {
-			// Ensure the path combination is valid (no shared rooms between paths)
 			if isValidCombination(combo) {
 				// Calculate ant distribution and total turns for this combination
 				antQueue, turns := distributeAnts(combo, antCount)
@@ -244,10 +234,10 @@ func findOptimalPathCombination(paths [][]string, antCount int, limits PathLimit
 			}
 		}
 	}
-	return optimalPaths, optimalAntQueue // Return the best path combination and ant distribution
+	return optimalPaths, optimalAntQueue
 }
 
-// containsDirectPath checks if there is a direct path (only 2 rooms) from start to end in the list of paths.
+// findOptimalPathCombination helper, checks if there is a direct path from start to end in the list of paths.
 func containsDirectPath(paths [][]string) bool {
 	for _, path := range paths {
 		if len(path) == 2 {
@@ -257,15 +247,15 @@ func containsDirectPath(paths [][]string) bool {
 	return false
 }
 
-// isValidCombination checks that paths do not overlap (only the start and end can be shared).
+// findOptimalPathCombination helper, checks that paths do not overlap.
 func isValidCombination(paths [][]string) bool {
 	roomSet := make(map[string]bool)
 	for _, path := range paths {
 		for _, room := range path[1 : len(path)-1] { // Ignore start and end rooms
 			if roomSet[room] {
-				return false // Room has already been used in another path
+				return false
 			}
-			roomSet[room] = true // Mark room as visited
+			roomSet[room] = true
 		}
 	}
 	return true
@@ -419,7 +409,6 @@ func simulateAntMovement(paths [][]string, antQueue []int, antCount int) {
 	}
 }
 
-// main function handles command-line arguments, loads the farm, finds optimal paths, and simulates ant movement
 func main() {
 	if len(os.Args) < 2 {
 		fmt.Println("Usage: go run . <input_file>")
@@ -433,22 +422,34 @@ func main() {
 		MaxDirectPaths:        3,
 		MaxPathsInCombination: 20,
 	}
-	farm, err := LoadFarm(os.Args[1])
+
+	// Only print farm information and continue with simulation if valid file and paths exist
+	farm, err := loadFarm(os.Args[1])
 	if err != nil {
 		fmt.Printf("Invalid file format: %v\n", err)
 		return
 	}
-
 	paths := findAllPaths(farm.AdjacencyList, farm.Start, farm.End, limits)
 	if len(paths) == 0 {
 		fmt.Println("No paths found from start to end.")
 		return
 	}
 
-	// Only print farm information and continue with simulation if valid paths exist
 	fmt.Printf("Number of ants: %d\n", farm.AntCount)
 	fmt.Printf("Start: %s\n", farm.Start)
-	fmt.Printf("End: %s\n\n", farm.End)
+	fmt.Printf("End: %s\n", farm.End)
+	fmt.Printf("Other rooms: ")
+	hasOtherRooms := false
+	for room := range farm.AdjacencyList {
+		if room != farm.Start && room != farm.End {
+			fmt.Printf("%s ", room)
+			hasOtherRooms = true
+		}
+	}
+	if !hasOtherRooms {
+		fmt.Printf("no other rooms found")
+	}
+	fmt.Printf("\n\n")
 
 	farm.Paths = paths
 	optimalPaths, optimalAntQueue := findOptimalPathCombination(paths, farm.AntCount, limits)

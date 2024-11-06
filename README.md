@@ -1,6 +1,6 @@
 # 🐜 Ant Farm (lem-in)
 
-![image](images.gif)
+![image](./images.gif)
 
 <sub>*Image courtesy of [RichardsCoffeeShop](https://github.com/RichardsCoffeeShop/), from the [lem-in project](https://github.com/RichardsCoffeeShop/lem-in), licensed under the [MIT License](https://opensource.org/licenses/MIT).*<sub>
 

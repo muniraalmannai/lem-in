@@ -1,0 +1,77 @@
+Visual representation of "Farm" struct:
+
++----------------------------+
+|           Farm             |
++----------------------------+
+| AntCount    : 20          | // Number of ants
+| Start       : "0"         | // Name of start room
+| End         : "4"         | // Name of end room
+| AdjacencyList: map        | // Map of room connections
+| Paths       : [][]string  | // List of possible paths
++----------------------------+
+
+Visual representation of "Ant" struct:
+
++----------------------------+
+|           Ant             |
++----------------------------+
+| id       : 1              | // Unique ant identifier
+| pathIdx  : 0              | // Index of chosen path
+| position : 0              | // Current position in path
+| done     : false          | // Has reached end?
++----------------------------+
+
+Visual representation of "PathLimits" struct:
+
++----------------------------+
+|        PathLimits          |
++----------------------------+
+| MaxRoomsPerPath      : 15  |
+| MaxTotalPaths        : 100 |
+| MaxPathCombination   : 20  |
+| MaxDirectPaths       : 3   |
+| MaxPathsInCombination: 20  |
++----------------------------+
+
+Visual representation of "AdjacencyList" map:
+
+AdjacencyList = {
+    "0": ["1", "5", "9", "10"],
+    "1": ["2", "11"],
+    "2": ["3"],
+    "3": ["4"],
+    "4": []
+}
+
+Visual representation of "Movement Tracking" map:
+
+Movement Tracking = {
+    "occupied_rooms": {
+        "1": true,
+        "5": true
+    },
+    "occupied_tunnels": {
+        "0-1": true,
+        "5-6": true
+    }
+}
+
+Visual representation of "Path Distribution" map:
+
+Path Distribution = {
+    "ant_queue": [3, 2, 2],  // Number of ants assigned to each path
+    "path_lengths": [4, 5, 4] // Length of each path
+}
+
+Visual representation of "Paths" slice [][]string:
+
+Paths = [
+    ["0", "1", "2", "3", "4"],
+    ["0", "5", "6", "7", "4"],
+    ["0", "9", "2", "3", "4"]
+]
+
+dfs Process in findAllPaths:
+Start → Check limits → Add room → Is it end? 
+                                  Yes → Save path
+                                  No → Check neighbors → Repeat

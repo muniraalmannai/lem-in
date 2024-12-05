@@ -118,4 +118,5 @@ With an input file as shown above, the output displays each turn's movements unt
 
 ## License
 
-This project is for educational purposes as part of a coursework assignment.
+This project is for educational purposes as part of a coursework assignment.  
+Image sourced from [RichardsCoffeeShop's lem-in repository](https://github.com/RichardsCoffeeShop/lem-in).
